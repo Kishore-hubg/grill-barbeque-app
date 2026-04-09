@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>The Grill & Barbeque</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#0f1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+    .hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+    @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes bounceIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    .slide-up{animation:slideUp .3s ease}.fade-in{animation:fadeIn .25s ease}.bounce-in{animation:bounceIn .4s ease}
+    .card-bg{background:#1a1f2e}
+    .glass{background:rgba(15,17,23,.96);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+    input,textarea,select{-webkit-appearance:none;appearance:none;font-family:inherit}
+    button{-webkit-tap-highlight-color:transparent;cursor:pointer;border:none;outline:none;font-family:inherit}
+    .demo-badge{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
+    * { -webkit-font-smoothing: antialiased; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import{h,render,Fragment}from'https://esm.sh/preact@10.19.6';
+import{useState,useEffect,useRef,useMemo}from'https://esm.sh/preact@10.19.6/hooks';
+import htm from'https://esm.sh/htm@3.1.1';
+const R=htm.bind(h);
+
+/* ── PALETTE ── */
+const C={amber:'#f59e0b',red:'#ef4444',blue:'#60a5fa',green:'#4ade80',purple:'#c084fc',orange:'#fb923c',teal:'#2dd4bf',pink:'#f472b6'};
+
+/* ── SAMPLE DATA ── */
+const SW=[1240,1850,2100,980,2450,3100,1750];
+const STOP=[
+  {name:'Tandoori Chicken',qty:42,revenue:15120},{name:'Dum Biriyani',qty:38,revenue:7220},
+  {name:'Butter Chicken',qty:31,revenue:7440},{name:'Family Pack Biry.',qty:28,revenue:15540},
+  {name:'SP. Shawarma',qty:26,revenue:3380},{name:'Chicken Tikka',qty:24,revenue:7680},{name:'Grilled Chicken',qty:22,revenue:8360},
+];
+const SPEAK=[3,8,28,38,24,10,6,9,20,35,42,30,16];
+
+/* ── MENU DATA ── */
+const MENU0=[
+  {id:'tandoori',name:'Tandoori & Grill',emoji:'🔥',color:C.red,items:[
+    {id:'t1',name:'Tandoori Chicken',fp:400,hp:210,hs:true},{id:'t2',name:'Kalmi Kabab',fp:300,hp:160,hs:true},
+    {id:'t3',name:'Pudina Kabab',fp:300,hp:160,hs:true},{id:'t4',name:'Malai Tikka',fp:380,hp:190,hs:true},
+    {id:'t5',name:'Tandoori Kabab',fp:300,hp:160,hs:true},{id:'t6',name:'Chicken Tikka',fp:350,hp:180,hs:true},
+    {id:'t7',name:'Alfaham',fp:400,hp:220,hs:true},{id:'t8',name:'Grilled Chicken',fp:420,hp:220,hs:true},
+    {id:'t9',name:'Pepper Kabab',fp:300,hp:160,hs:true},{id:'t10',name:'Achari Kabab',fp:300,hp:160,hs:true},
+  ]},
+  {id:'biriyani',name:'Biriyani',emoji:'🍛',color:C.amber,items:[
+    {id:'b1',name:'Dum Biriyani',fp:200,hp:130,hs:true},{id:'b2',name:'Fry Piece Biriyani',fp:250,hs:false},
+    {id:'b3',name:'SP. Biriyani',fp:280,hs:false},{id:'b4',name:'Mugalai Biriyani',fp:280,hs:false},
+    {id:'b5',name:'Egg Biriyani',fp:120,hs:false},{id:'b6',name:'Kalmi 2 Piece Biriyani',fp:260,hs:false},
+    {id:'b7',name:'Grill 1 Piece Biriyani',fp:220,hs:false},{id:'b8',name:'Tikka 4 Piece Biriyani',fp:260,hs:false},
+    {id:'b9',name:'Family Pack Biriyani',fp:555,hs:false,note:'4-5 persons'},
+  ]},
+  {id:'naan',name:'Naan & Roti',emoji:'🫓',color:C.purple,items:[
+    {id:'n1',name:'Butter Naan',fp:45,hs:false},{id:'n2',name:'Butter Kulcha',fp:50,hs:false},
+    {id:'n3',name:'Plain Naan',fp:40,hs:false},{id:'n4',name:'Plain Kulcha',fp:45,hs:false},
+    {id:'n5',name:'Tandoori Roti',fp:30,hs:false},{id:'n6',name:'Butter Roti',fp:35,hs:false},
+  ]},
+  {id:'shawarma',name:'Shawarma',emoji:'🌯',color:C.green,items:[
+    {id:'s1',name:'Regular Shawarma',fp:100,hs:false},{id:'s2',name:'SP. Shawarma',fp:130,hs:false},{id:'s3',name:'Plate Shawarma',fp:180,hs:false},
+  ]},
+  {id:'cfry',name:'Chinese Fry',emoji:'🥢',color:C.blue,items:[
+    {id:'cf1',name:'Chilli Chicken',fp:250,hs:false},{id:'cf2',name:'Chicken Manchurian',fp:250,hs:false},
+    {id:'cf3',name:'Chicken 65',fp:250,hs:false},{id:'cf4',name:'Lemon Chicken',fp:250,hs:false},
+    {id:'cf5',name:'Paneer Chilli',fp:250,hs:false},{id:'cf6',name:'Gobi Chilli',fp:280,hs:false},
+    {id:'cf7',name:'Gobi Manchurian',fp:200,hs:false},{id:'cf8',name:'Gobi 65',fp:200,hs:false},
+  ]},
+  {id:'curry',name:'Curry',emoji:'🍲',color:C.orange,items:[
+    {id:'cu1',name:'Butter Chicken',fp:260,hs:false},{id:'cu2',name:'Paneer Butter Masala',fp:300,hs:false},
+    {id:'cu3',name:'Kadai Paneer',fp:300,hs:false},{id:'cu4',name:'Kadai Chicken',fp:240,hs:false},
+    {id:'cu5',name:'Chicken Masala',fp:240,hs:false},{id:'cu6',name:'Hydrabadi Chicken',fp:240,hs:false},
+    {id:'cu7',name:'Hydrabadi Paneer',fp:300,hs:false},{id:'cu8',name:'Punjabi Chicken',fp:240,hs:false},
+    {id:'cu9',name:'Chicken Kolapoori',fp:240,hs:false},{id:'cu10',name:'Paneer Kolapoori',fp:300,hs:false},
+  ]},
+  {id:'soup',name:'Soup',emoji:'🥣',color:C.pink,items:[
+    {id:'so1',name:'Veg Hot & Sour Soup',fp:100,hs:false},{id:'so2',name:'Veg Manchow Soup',fp:100,hs:false},
+    {id:'so3',name:'Chicken Hot & Sour Soup',fp:120,hs:false},{id:'so4',name:'Chicken Manchow Soup',fp:120,hs:false},
+  ]},
+  {id:'rice',name:'Chinese Rice',emoji:'🍚',color:C.green,items:[
+    {id:'r1',name:'Veg Rice',fp:100,hs:false},{id:'r2',name:'Veg Schezwan Rice',fp:120,hs:false},
+    {id:'r3',name:'Chicken Rice',fp:180,hs:false},{id:'r4',name:'Chicken Schezwan Rice',fp:190,hs:false},
+    {id:'r5',name:'Egg Rice',fp:120,hs:false},{id:'r6',name:'Egg Schezwan Rice',fp:130,hs:false},
+  ]},
+  {id:'noodles',name:'Chinese Noodles',emoji:'🍜',color:C.purple,items:[
+    {id:'no1',name:'Veg Noodles',fp:110,hs:false},{id:'no2',name:'Veg Schezwan Noodles',fp:120,hs:false},
+    {id:'no3',name:'Chicken Noodles',fp:180,hs:false},{id:'no4',name:'Chicken Schezwan Noodles',fp:190,hs:false},
+    {id:'no5',name:'Egg Noodles',fp:130,hs:false},{id:'no6',name:'Egg Schezwan Noodles',fp:140,hs:false},
+  ]},
+  {id:'drinks',name:'Soft Drinks',emoji:'🥤',color:C.teal,items:[
+    {id:'d1',name:'Cold Drink 250ml',fp:20,hs:false},{id:'d2',name:'Cold Drink 500ml',fp:40,hs:false},
+  ]},
+];
+
+/* ── UTILS ── */
+const genId=()=>`GB${Date.now().toString().slice(-6)}`;
+const fmtT=d=>new Date(d).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+const fmtD=d=>new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+const mDeep=(t,s)=>{const r={...t};for(const k in s){if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k]))r[k]=mDeep(t[k]||{},s[k]);else r[k]=s[k];}return r;};
+
+/* ── CHART WRAPPER ── */
+const GBChart=({type,data,options={},height=200})=>{
+  const cvs=useRef(null),inst=useRef(null);
+  useEffect(()=>{
+    if(!cvs.current||typeof Chart==='undefined')return;
+    if(inst.current){inst.current.destroy();inst.current=null;}
+    const base={responsive:true,maintainAspectRatio:false,animation:{duration:600},
+      plugins:{
+        legend:{position:'bottom',labels:{color:'#9ca3af',font:{size:10},boxWidth:10,padding:10}},
+        tooltip:{backgroundColor:'#0f1117',titleColor:'#f9fafb',bodyColor:'#9ca3af',borderColor:'#374151',borderWidth:1,padding:10,cornerRadius:8}
+      }
+    };
+    if(type!=='doughnut'&&type!=='pie'){
+      base.scales={
+        x:{grid:{color:'rgba(55,65,81,.3)'},ticks:{color:'#6b7280',font:{size:9}},border:{display:false}},
+        y:{grid:{color:'rgba(55,65,81,.3)'},ticks:{color:'#6b7280',font:{size:9}},border:{display:false}}
+      };
+    }
+    inst.current=new Chart(cvs.current,{type,data,options:mDeep(base,options)});
+    return()=>{if(inst.current){inst.current.destroy();inst.current=null;}};
+  },[type,JSON.stringify(data)]);
+  return R`<div style=${{height:height+'px',position:'relative'}}><canvas ref=${cvs}></canvas></div>`;
+};
+
+/* ── KPI CARD ── */
+const Kpi=({label,value,sub,color,icon,trend})=>R`
+  <div class="p-4 rounded-2xl card-bg flex flex-col gap-1">
+    <div class="flex items-center justify-between">
+      <span class="text-xl">${icon}</span>
+      ${trend!==undefined?R`<span class=${'text-xs font-semibold '+(trend>=0?'text-green-400':'text-red-400')}>${trend>=0?'↑':'↓'}${Math.abs(trend)}%</span>`:''}
+    </div>
+    <p class="font-bold text-2xl leading-tight" style=${{color}}>${value}</p>
+    <p class="text-xs" style=${{color:'#6b7280'}}>${label}</p>
+    ${sub?R`<p class="text-xs" style=${{color:'#374151'}}>${sub}</p>`:''}
+  </div>`;
+
+/* ── ANALYTICS TAB ── */
+const Analytics=({orders})=>{
+  const isDemo=orders.length===0;
+  const wkLbls=useMemo(()=>Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));return d.toLocaleDateString('en-IN',{month:'short',day:'numeric'});}),[]);
+  const wkRev=useMemo(()=>{
+    if(isDemo)return SW;
+    return Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));return orders.filter(o=>new Date(o.time).toDateString()===d.toDateString()&&o.status!=='cancelled').reduce((s,o)=>s+o.total,0);});
+  },[orders,isDemo]);
+  const types=useMemo(()=>{
+    if(isDemo)return{di:45,to:30,de:25};
+    return{di:orders.filter(o=>o.type==='dine-in').length,to:orders.filter(o=>o.type==='takeout').length,de:orders.filter(o=>o.type==='delivery').length};
+  },[orders,isDemo]);
+  const stt=useMemo(()=>{
+    if(isDemo)return{p:3,pr:8,r:5,d:80,c:4};
+    return{p:orders.filter(o=>o.status==='pending').length,pr:orders.filter(o=>o.status==='preparing').length,r:orders.filter(o=>o.status==='ready').length,d:orders.filter(o=>o.status==='delivered').length,c:orders.filter(o=>o.status==='cancelled').length};
+  },[orders,isDemo]);
+  const top=useMemo(()=>{
+    if(isDemo)return STOP;
+    const c={};
+    orders.filter(o=>o.status!=='cancelled').forEach(ord=>ord.items.forEach(it=>{if(!c[it.name])c[it.name]={qty:0,revenue:0};c[it.name].qty+=it.qty;c[it.name].revenue+=it.price*it.qty;}));
+    return Object.entries(c).sort((a,b)=>b[1].qty-a[1].qty).slice(0,7).map(([name,d])=>({name:name.length>16?name.slice(0,16)+'…':name,...d}));
+  },[orders,isDemo]);
+
+  const todayStr=new Date().toDateString();
+  const todayO=orders.filter(o=>new Date(o.time).toDateString()===todayStr);
+  const tRev=isDemo?1750:todayO.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+o.total,0);
+  const wRev=isDemo?SW.reduce((a,b)=>a+b,0):wkRev.reduce((a,b)=>a+b,0);
+  const aRev=isDemo?128300:orders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+o.total,0);
+  const tOrds=isDemo?312:orders.length;
+  const avg=isDemo?411:(orders.filter(o=>o.status!=='cancelled').length>0?Math.round(aRev/orders.filter(o=>o.status!=='cancelled').length):0);
+
+  const lineData={labels:wkLbls,datasets:[{label:'Revenue',data:wkRev,borderColor:C.amber,backgroundColor:'rgba(245,158,11,.08)',borderWidth:2.5,pointBackgroundColor:C.amber,pointRadius:4,tension:.4,fill:true}]};
+  const typeD={labels:['Dine In 🪑','Takeout 📦','Delivery 🛵'],datasets:[{data:[types.di,types.to,types.de],backgroundColor:[C.amber,C.blue,C.green],borderColor:'#0f1117',borderWidth:3,hoverOffset:6}]};
+  const sttD={labels:['Pending','Preparing','Ready','Delivered','Cancelled'],datasets:[{data:[stt.p,stt.pr,stt.r,stt.d,stt.c],backgroundColor:[C.amber,C.blue,C.green,'#6b7280',C.red],borderColor:'#0f1117',borderWidth:3,hoverOffset:6}]};
+  const topB={labels:top.map(i=>i.name),datasets:[{label:'Qty',data:top.map(i=>i.qty),backgroundColor:[C.amber,C.red,C.blue,C.green,C.purple,C.orange,C.teal],borderRadius:6,borderSkipped:false}]};
+  const pkB={labels:['10am','11am','12pm','1pm','2pm','3pm','4pm','5pm','6pm','7pm','8pm','9pm','10pm'],datasets:[{label:'Orders',data:isDemo?SPEAK:Array(13).fill(0),backgroundColor:SPEAK.map(v=>v>=35?C.red:v>=20?C.amber:'rgba(245,158,11,.25)'),borderRadius:5,borderSkipped:false}]};
+  const rvtB={labels:['Dine In','Takeout','Delivery'],datasets:[{label:'Revenue',data:isDemo?[58400,38900,31000]:[orders.filter(o=>o.type==='dine-in'&&o.status!=='cancelled').reduce((s,o)=>s+o.total,0),orders.filter(o=>o.type==='takeout'&&o.status!=='cancelled').reduce((s,o)=>s+o.total,0),orders.filter(o=>o.type==='delivery'&&o.status!=='cancelled').reduce((s,o)=>s+o.total,0)],backgroundColor:[C.amber,C.blue,C.green],borderRadius:8,borderSkipped:false}]};
+  const nL={plugins:{legend:{display:false}}};
+  const iY={indexAxis:'y'};
+
+  return R`<div class="fade-in">
+    ${isDemo?R`<div class="flex items-center gap-2 mb-4"><span class="demo-badge">📊 Sample Data</span><span class="text-xs" style=${{color:'#6b7280'}}>Showing demo data until real orders arrive</span></div>`:''}
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      <${Kpi} icon="📅" label="Today's Revenue" value=${'₹'+tRev.toLocaleString()} sub=${(isDemo?17:todayO.length)+' orders'} color=${C.amber} trend=${12}/>
+      <${Kpi} icon="📆" label="This Week" value=${'₹'+wRev.toLocaleString()} sub="last 7 days" color=${C.green} trend=${8}/>
+      <${Kpi} icon="🧾" label="Total Orders" value=${tOrds} sub="all time" color=${C.blue}/>
+      <${Kpi} icon="💰" label="Avg Order" value=${'₹'+avg} sub="per order" color=${C.purple} trend=${5}/>
+    </div>
+    <div class="rounded-2xl p-4 card-bg mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-white font-semibold text-sm">📈 Revenue Trend</p>
+        <span class="text-xs" style=${{color:'#6b7280'}}>Last 7 Days</span>
+      </div>
+      <${GBChart} type="line" data=${lineData} height=${180} options=${{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'₹'+v,color:'#6b7280',font:{size:9}},grid:{color:'rgba(55,65,81,.3)'},border:{display:false}}}}}/>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="rounded-2xl p-3 card-bg">
+        <p class="text-white font-semibold text-xs mb-2">🗂 Order Types</p>
+        <${GBChart} type="doughnut" data=${typeD} height=${160} options=${{plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:8,padding:6}}},cutout:'65%'}}/>
+      </div>
+      <div class="rounded-2xl p-3 card-bg">
+        <p class="text-white font-semibold text-xs mb-2">🔄 Order Status</p>
+        <${GBChart} type="doughnut" data=${sttD} height=${160} options=${{plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:8,padding:6}}},cutout:'65%'}}/>
+      </div>
+    </div>
+    <div class="rounded-2xl p-4 card-bg mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-white font-semibold text-sm">🏆 Top Selling Items</p>
+        <span class="text-xs" style=${{color:'#6b7280'}}>By Qty</span>
+      </div>
+      <${GBChart} type="bar" data=${topB} height=${200} options=${{...nL,...iY,scales:{x:{grid:{color:'rgba(55,65,81,.3)'},ticks:{color:'#6b7280',font:{size:9}},border:{display:false}},y:{grid:{display:false},ticks:{color:'#e5e7eb',font:{size:9}},border:{display:false}}}}}/>
+      <div class="mt-4 space-y-2">
+        ${top.slice(0,5).map((item,i)=>R`
+          <div class="flex items-center gap-2" key=${i}>
+            <span class="text-xs font-bold w-4" style=${{color:'#6b7280'}}>${i+1}</span>
+            <div class="flex-1 h-1.5 rounded-full" style=${{background:'#111827'}}>
+              <div class="h-full rounded-full" style=${{width:Math.round((item.qty/top[0].qty)*100)+'%',background:'linear-gradient(90deg,#f59e0b,#ef4444)'}}></div>
+            </div>
+            <span class="text-xs text-white" style=${{width:'7rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${item.name}</span>
+            <span class="text-xs font-semibold" style=${{color:C.amber}}>₹${item.revenue.toLocaleString()}</span>
+          </div>`)}
+      </div>
+    </div>
+    <div class="rounded-2xl p-4 card-bg mb-4">
+      <p class="text-white font-semibold text-sm mb-3">💳 Revenue by Order Type</p>
+      <${GBChart} type="bar" data=${rvtB} height=${160} options=${{...nL,scales:{x:{grid:{display:false},ticks:{color:'#e5e7eb',font:{size:10}},border:{display:false}},y:{grid:{color:'rgba(55,65,81,.3)'},ticks:{color:'#6b7280',font:{size:9},callback:v=>'₹'+v},border:{display:false}}}}}/>
+    </div>
+    <div class="rounded-2xl p-4 card-bg mb-4">
+      <div class="flex items-center justify-between mb-1">
+        <p class="text-white font-semibold text-sm">⏰ Peak Hours</p>
+        <span class="text-xs" style=${{color:'#6b7280'}}>Orders/Hour</span>
+      </div>
+      <p class="text-xs mb-3" style=${{color:'#6b7280'}}>🔴 Rush &nbsp;🟡 Busy &nbsp;⬛ Slow</p>
+      <${GBChart} type="bar" data=${pkB} height=${150} options=${{...nL,scales:{x:{grid:{display:false},ticks:{color:'#9ca3af',font:{size:8}},border:{display:false}},y:{grid:{color:'rgba(55,65,81,.3)'},ticks:{color:'#6b7280',font:{size:9}},border:{display:false}}}}}/>
+      <p class="text-center text-xs mt-3" style=${{color:'#6b7280'}}>🔥 Peak: <span style=${{color:C.red}}>7pm–10pm</span> &nbsp;|&nbsp; Also busy: <span style=${{color:C.amber}}>12pm–2pm</span></p>
+    </div>
+    <div class="rounded-2xl p-4 card-bg mb-4">
+      <p class="text-white font-semibold text-sm mb-3">📋 Financial Summary</p>
+      ${[
+        {label:"Gross Revenue",value:'₹'+aRev.toLocaleString(),color:C.green},
+        {label:"Today's Collection",value:'₹'+tRev.toLocaleString(),color:C.amber},
+        {label:"This Week",value:'₹'+wRev.toLocaleString(),color:C.blue},
+        {label:"Total Transactions",value:''+tOrds,color:C.purple},
+        {label:"Avg Ticket Size",value:'₹'+avg,color:C.orange},
+        {label:"Cancelled (Loss)",value:isDemo?'₹2,100':'₹'+orders.filter(o=>o.status==='cancelled').reduce((s,o)=>s+o.total,0),color:C.red},
+      ].map((r,i)=>R`
+        <div class="flex justify-between items-center py-2.5" key=${i} style=${{borderBottom:i<5?'1px solid #111827':'none'}}>
+          <span class="text-sm" style=${{color:'#9ca3af'}}>${r.label}</span>
+          <span class="font-bold text-sm" style=${{color:r.color}}>${r.value}</span>
+        </div>`)}
+    </div>
+  </div>`;
+};
+
+/* ── SIZE MODAL ── */
+const SizeModal=({item,onClose,onAdd})=>{
+  const [size,setSize]=useState('full');
+  const price=size==='full'?item.fp:item.hp;
+  return R`
+    <div class="fixed inset-0 z-50 flex items-end justify-center fade-in" style=${{background:'rgba(0,0,0,.8)'}} onClick=${onClose}>
+      <div class="w-full max-w-md rounded-t-3xl p-6 slide-up" style=${{background:'#1a1f2e'}} onClick=${e=>e.stopPropagation()}>
+        <div class="w-10 h-1 rounded-full mx-auto mb-5" style=${{background:'#374151'}}></div>
+        <h3 class="text-white font-bold text-lg mb-1">${item.name}</h3>
+        <p class="text-gray-400 text-sm mb-5">Choose portion size</p>
+        <div class="grid grid-cols-2 gap-3 mb-6">
+          ${[['full',item.fp,'Full Portion'],['half',item.hp,'Half Portion']].map(([sz,pr,lb])=>R`
+            <button key=${sz} onClick=${()=>setSize(sz)} class="p-4 rounded-2xl text-left transition-all" style=${{border:'2px solid '+(size===sz?C.amber:'#374151'),background:size===sz?'rgba(245,158,11,.1)':'#111827'}}>
+              <p class="text-white font-semibold text-sm">${lb}</p>
+              <p class="font-bold text-xl mt-1" style=${{color:C.amber}}>₹${pr}</p>
+            </button>`)}
+        </div>
+        <div class="flex gap-3">
+          <button onClick=${onClose} class="flex-1 py-3 rounded-2xl text-gray-300 font-semibold text-sm" style=${{background:'#374151'}}>Cancel</button>
+          <button onClick=${()=>{onAdd(item,size,price);onClose();}} class="py-3 rounded-2xl font-bold text-black text-sm" style=${{flex:2,background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>Add to Cart — ₹${price}</button>
+        </div>
+      </div>
+    </div>`;
+};
+
+/* ── MENU ITEM CARD ── */
+const MCard=({item,cartQty,onAdd,onRemove,onSelectSize})=>{
+  const handleAdd=()=>item.hs?onSelectSize(item):onAdd(item,'full',item.fp);
+  return R`
+    <div class="flex items-center gap-3 p-4 rounded-2xl mb-2 card-bg">
+      <div class="flex-1 min-w-0">
+        <h4 class="text-white font-semibold text-sm leading-snug">${item.name}</h4>
+        ${item.note?R`<p class="text-xs mt-0.5" style=${{color:'#6b7280'}}>${item.note}</p>`:''}
+        <div class="mt-1.5">
+          ${item.hs
+            ?R`<span class="text-sm font-bold" style=${{color:C.amber}}>₹${item.hp} <span class="text-gray-500 font-normal text-xs">half</span> · ₹${item.fp} <span class="text-gray-500 font-normal text-xs">full</span></span>`
+            :R`<span class="text-sm font-bold" style=${{color:C.amber}}>₹${item.fp}</span>`}
+        </div>
+      </div>
+      <div class="flex-shrink-0">
+        ${cartQty>0?R`
+          <div class="flex items-center gap-2">
+            <button onClick=${()=>onRemove(item.id)} class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-lg" style=${{background:'#374151'}}>−</button>
+            <span class="text-white font-bold text-sm w-5 text-center">${cartQty}</span>
+            <button onClick=${handleAdd} class="w-8 h-8 rounded-full flex items-center justify-center text-black font-bold text-lg" style=${{background:C.amber}}>+</button>
+          </div>`
+        :R`<button onClick=${handleAdd} class="px-4 py-2 rounded-xl text-black font-bold text-xs" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>ADD</button>`}
+      </div>
+    </div>`;
+};
+
+/* ── CHECKOUT MODAL ── */
+const Checkout=({cart,orderType,onClose,onPlace})=>{
+  const [form,setForm]=useState({name:'',phone:'',tableNo:'',address:'',notes:''});
+  const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const up=(k,v)=>setForm(f=>({...f,[k]:v}));
+  return R`
+    <div class="fixed inset-0 z-50 flex items-end justify-center fade-in" style=${{background:'rgba(0,0,0,.88)'}}>
+      <div class="w-full max-w-md rounded-t-3xl overflow-y-auto slide-up" style=${{background:'#0f1117',maxHeight:'92vh'}}>
+        <div class="p-6">
+          <div class="w-10 h-1 rounded-full mx-auto mb-5" style=${{background:'#374151'}}></div>
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-white text-xl font-bold">Checkout</h2>
+            <button onClick=${onClose} class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 card-bg">✕</button>
+          </div>
+          <div class="rounded-2xl p-4 mb-5 card-bg">
+            <p class="text-xs font-semibold uppercase tracking-wider mb-3" style=${{color:'#6b7280'}}>Order Summary</p>
+            ${cart.map(item=>R`
+              <div class="flex justify-between text-sm mb-1.5" key=${item.cartKey}>
+                <span class="text-gray-300 truncate mr-2">${item.name}${item.hs?' ('+(item.size==='half'?'Half':'Full')+')':''} × ${item.qty}</span>
+                <span class="text-white font-semibold flex-shrink-0">₹${item.price*item.qty}</span>
+              </div>`)}
+            <div class="border-t mt-3 pt-3 flex justify-between" style=${{borderColor:'#374151'}}>
+              <span class="text-white font-bold">Total</span>
+              <span class="font-bold text-lg" style=${{color:C.amber}}>₹${total}</span>
+            </div>
+          </div>
+          <form onSubmit=${e=>{e.preventDefault();onPlace(form);}} class="space-y-3">
+            <input required type="text" placeholder="Your Name" value=${form.name} onInput=${e=>up('name',e.target.value)} class="w-full p-4 rounded-2xl text-white placeholder-gray-600 outline-none text-sm card-bg"/>
+            <input required type="tel" placeholder="Phone Number" value=${form.phone} onInput=${e=>up('phone',e.target.value)} class="w-full p-4 rounded-2xl text-white placeholder-gray-600 outline-none text-sm card-bg"/>
+            ${orderType==='dine-in'?R`<input required type="text" placeholder="Table Number" value=${form.tableNo} onInput=${e=>up('tableNo',e.target.value)} class="w-full p-4 rounded-2xl text-white placeholder-gray-600 outline-none text-sm card-bg"/>`:''}
+            ${orderType==='delivery'?R`<textarea required placeholder="Delivery Address" value=${form.address} onInput=${e=>up('address',e.target.value)} rows="3" class="w-full p-4 rounded-2xl text-white placeholder-gray-600 outline-none text-sm resize-none card-bg"></textarea>`:''}
+            <textarea placeholder="Special instructions (optional)" value=${form.notes} onInput=${e=>up('notes',e.target.value)} rows="2" class="w-full p-4 rounded-2xl text-white placeholder-gray-600 outline-none text-sm resize-none card-bg"></textarea>
+            <button type="submit" class="w-full py-4 rounded-2xl font-bold text-black text-base" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>Place Order — ₹${total}</button>
+          </form>
+        </div>
+      </div>
+    </div>`;
+};
+
+/* ── SUCCESS MODAL ── */
+const Success=({orderId,onClose})=>R`
+  <div class="fixed inset-0 z-50 flex items-center justify-center px-6 fade-in" style=${{background:'rgba(0,0,0,.92)'}}>
+    <div class="w-full max-w-xs rounded-3xl p-8 text-center bounce-in card-bg">
+      <div class="text-7xl mb-4">🎉</div>
+      <h2 class="text-white text-2xl font-bold mb-2">Order Placed!</h2>
+      <p class="text-gray-400 text-sm mb-4">Your order is being prepared</p>
+      <div class="rounded-2xl p-4 my-4" style=${{background:'#111827'}}>
+        <p class="text-xs text-gray-500 mb-1">Order ID</p>
+        <p class="font-bold text-2xl" style=${{color:C.amber}}>#${orderId}</p>
+      </div>
+      <p class="text-gray-500 text-xs mb-6">Thank you for choosing The Grill & Barbeque!</p>
+      <button onClick=${onClose} class="w-full py-3.5 rounded-2xl font-bold text-black" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>Back to Menu</button>
+    </div>
+  </div>`;
+
+/* ── CUSTOMER VIEW ── */
+const CustomerView=({onGoAdmin,orders,setOrders,menuData})=>{
+  const [otype,setOtype]=useState('dine-in');
+  const [cart,setCart]=useState([]);
+  const [cartOpen,setCartOpen]=useState(false);
+  const [chkOpen,setChkOpen]=useState(false);
+  const [succId,setSuccId]=useState(null);
+  const [activeCat,setActiveCat]=useState('tandoori');
+  const [sizeItem,setSizeItem]=useState(null);
+  const [search,setSearch]=useState('');
+  const catRefs=useRef({});
+
+  const cartTotal=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const cartCount=cart.reduce((s,i)=>s+i.qty,0);
+
+  const addToCart=(item,size,price)=>setCart(prev=>{
+    const key=item.id+'-'+size;
+    const ex=prev.find(i=>i.cartKey===key);
+    if(ex)return prev.map(i=>i.cartKey===key?{...i,qty:i.qty+1}:i);
+    return[...prev,{...item,cartKey:key,size,price,qty:1}];
+  });
+  const decByKey=ck=>setCart(prev=>prev.map(i=>i.cartKey===ck?(i.qty>1?{...i,qty:i.qty-1}:null):i).filter(Boolean));
+  const removeFromMenu=id=>setCart(prev=>{
+    const m=prev.filter(i=>i.id===id);
+    if(!m.length)return prev;
+    const last=m[m.length-1];
+    return prev.map(i=>i.cartKey===last.cartKey?(i.qty>1?{...i,qty:i.qty-1}:null):i).filter(Boolean);
+  });
+  const getQty=id=>cart.filter(i=>i.id===id).reduce((s,i)=>s+i.qty,0);
+  const placeOrder=form=>{
+    const id=genId();
+    setOrders(prev=>[{id,items:[...cart],total:cartTotal,type:otype,status:'pending',time:new Date().toISOString(),customer:form},...prev]);
+    setCart([]);setChkOpen(false);setSuccId(id);
+  };
+  const scrollTo=catId=>{
+    setActiveCat(catId);
+    const el=catRefs.current[catId];
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  const filtered=search?menuData.map(c=>({...c,items:c.items.filter(i=>i.name.toLowerCase().includes(search.toLowerCase()))})).filter(c=>c.items.length>0):menuData;
+
+  return R`
+    <div class="min-h-screen" style=${{background:'#0f1117'}}>
+      <div class="sticky top-0 z-30 px-4 py-3 flex items-center gap-3 glass border-b" style=${{borderColor:'#1a1f2e'}}>
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>🔥</div>
+        <div class="flex-1 min-w-0">
+          <h1 class="text-white font-bold text-sm leading-tight truncate">The Grill & Barbeque</h1>
+          <p class="text-xs truncate" style=${{color:'#6b7280'}}>L.N.Puram, AP · 099592 28988</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onClick=${onGoAdmin} class="text-xs px-3 py-1.5 rounded-lg font-medium card-bg" style=${{color:'#9ca3af'}}>Admin</button>
+          <button onClick=${()=>setCartOpen(true)} class="relative w-10 h-10 rounded-xl flex items-center justify-center" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>
+            <span class="text-lg">🛒</span>
+            ${cartCount>0?R`<span class="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-white text-black text-xs font-bold flex items-center justify-center">${cartCount}</span>`:''}
+          </button>
+        </div>
+      </div>
+
+      <div class="px-4 pt-4 pb-3">
+        <div class="rounded-3xl p-5 relative overflow-hidden" style=${{background:'linear-gradient(135deg,#1a1020,#1a1f2e)',border:'1px solid #2d1f3d'}}>
+          <div class="absolute right-4 top-4 text-5xl select-none" style=${{opacity:.2}}>🔥</div>
+          <span class="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-3" style=${{background:'rgba(245,158,11,.15)',color:C.amber}}>Always All You Can Eat</span>
+          <h2 class="text-white text-2xl font-bold mb-1">What'll it be? 🍽️</h2>
+          <p class="text-sm mb-4" style=${{color:'#6b7280'}}>Srikalahasti–Tirupati Rd, Andhra Pradesh</p>
+          <div class="flex gap-2">
+            ${[['dine-in','🪑','Dine In'],['takeout','📦','Takeout'],['delivery','🛵','Delivery']].map(([t,ic,lb])=>R`
+              <button key=${t} onClick=${()=>setOtype(t)} class="flex-1 py-2.5 rounded-2xl text-xs font-bold"
+                style=${{background:otype===t?'linear-gradient(135deg,#f59e0b,#ef4444)':'#111827',color:otype===t?'#000':'#6b7280'}}>
+                ${ic} ${lb}
+              </button>`)}
+          </div>
+        </div>
+      </div>
+
+      <div class="px-4 pb-3">
+        <div class="flex items-center gap-3 px-4 py-3 rounded-2xl card-bg">
+          <span style=${{color:'#6b7280'}}>🔍</span>
+          <input type="text" placeholder="Search menu…" value=${search} onInput=${e=>setSearch(e.target.value)} class="flex-1 bg-transparent text-white text-sm outline-none" style=${{color:'white'}}/>
+          ${search?R`<button onClick=${()=>setSearch('')} class="text-xs px-2 py-0.5 rounded-lg card-bg" style=${{color:'#6b7280'}}>✕</button>`:''}
+        </div>
+      </div>
+
+      ${!search?R`
+        <div class="flex gap-2 px-4 pb-3 overflow-x-auto hide-scrollbar">
+          ${menuData.map(cat=>R`
+            <button key=${cat.id} onClick=${()=>scrollTo(cat.id)} class="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap"
+              style=${{background:activeCat===cat.id?'linear-gradient(135deg,#f59e0b,#ef4444)':'#1a1f2e',color:activeCat===cat.id?'#000':'#9ca3af'}}>
+              ${cat.emoji} ${cat.name}
+            </button>`)}
+        </div>`:''}
+
+      <div class="px-4 pb-36">
+        ${filtered.map(cat=>R`
+          <div key=${cat.id} ref=${el=>catRefs.current[cat.id]=el} class="mb-6">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-1 h-5 rounded-full" style=${{background:cat.color}}></span>
+              <h3 class="text-white font-bold text-base">${cat.emoji} ${cat.name}</h3>
+              <span class="text-xs px-2 py-0.5 rounded-full card-bg" style=${{color:'#6b7280'}}>${cat.items.length}</span>
+            </div>
+            ${cat.items.map(item=>R`<${MCard} key=${item.id} item=${item} cartQty=${getQty(item.id)} onAdd=${addToCart} onRemove=${removeFromMenu} onSelectSize=${setSizeItem}/>`)}
+          </div>`)}
+        ${filtered.length===0?R`<div class="text-center py-16"><div class="text-5xl mb-3">🔍</div><p class="text-gray-400">No items found</p></div>`:''}
+      </div>
+
+      ${cartCount>0?R`
+        <div class="fixed bottom-0 left-0 right-0 px-4 pb-6 z-20">
+          <button onClick=${()=>setCartOpen(true)} class="w-full max-w-md mx-auto flex items-center justify-between px-5 py-4 rounded-2xl shadow-2xl" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)',display:'flex'}}>
+            <span class="flex items-center gap-2">
+              <span class="text-white text-xs font-bold px-2 py-0.5 rounded-lg" style=${{background:'rgba(0,0,0,.2)'}}>${cartCount} item${cartCount>1?'s':''}</span>
+              <span class="text-black font-semibold text-sm">View Cart</span>
+            </span>
+            <span class="text-black font-bold text-lg">₹${cartTotal} →</span>
+          </button>
+        </div>`:''}
+
+      ${cartOpen?R`
+        <div class="fixed inset-0 z-40 flex items-end justify-center fade-in" style=${{background:'rgba(0,0,0,.78)'}} onClick=${()=>setCartOpen(false)}>
+          <div class="w-full max-w-md rounded-t-3xl overflow-y-auto slide-up" style=${{background:'#0f1117',maxHeight:'85vh'}} onClick=${e=>e.stopPropagation()}>
+            <div class="p-6">
+              <div class="w-10 h-1 rounded-full mx-auto mb-5" style=${{background:'#374151'}}></div>
+              <div class="flex items-center justify-between mb-5">
+                <h2 class="text-white text-xl font-bold">Your Cart</h2>
+                <div class="flex gap-2">
+                  ${cart.length>0?R`<button onClick=${()=>setCart([])} class="text-xs px-3 py-1.5 rounded-lg card-bg" style=${{color:C.red}}>Clear</button>`:''}
+                  <button onClick=${()=>setCartOpen(false)} class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 card-bg">✕</button>
+                </div>
+              </div>
+              ${cart.length===0?R`
+                <div class="text-center py-16">
+                  <div class="text-6xl mb-4">🛒</div>
+                  <p class="text-white font-semibold mb-1">Cart is empty</p>
+                  <p class="text-gray-500 text-sm">Add items to get started</p>
+                </div>`:R`
+                <div class="space-y-2 mb-5">
+                  ${cart.map(item=>R`
+                    <div key=${item.cartKey} class="flex items-center gap-3 p-3 rounded-2xl card-bg">
+                      <div class="flex-1 min-w-0">
+                        <p class="text-white text-sm font-semibold truncate">${item.name}</p>
+                        <p class="text-xs" style=${{color:'#6b7280'}}>${item.hs?(item.size==='half'?'Half · ':'Full · '):''}₹${item.price} each</p>
+                      </div>
+                      <div class="flex items-center gap-2 flex-shrink-0">
+                        <button onClick=${()=>decByKey(item.cartKey)} class="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold" style=${{background:'#374151'}}>−</button>
+                        <span class="text-white font-bold text-sm w-4 text-center">${item.qty}</span>
+                        <button onClick=${()=>addToCart(item,item.size,item.price)} class="w-7 h-7 rounded-full flex items-center justify-center text-black font-bold" style=${{background:C.amber}}>+</button>
+                      </div>
+                      <span class="text-white font-semibold text-sm flex-shrink-0">₹${item.price*item.qty}</span>
+                    </div>`)}
+                </div>
+                <div class="rounded-2xl p-4 mb-5 card-bg">
+                  <div class="flex justify-between text-sm mb-2"><span class="text-gray-400">Subtotal</span><span class="text-white">₹${cartTotal}</span></div>
+                  <div class="flex justify-between text-sm mb-2"><span class="text-gray-400">Taxes</span><span style=${{color:C.green}}>Included</span></div>
+                  <div class="border-t pt-2 flex justify-between" style=${{borderColor:'#374151'}}>
+                    <span class="text-white font-bold">Total</span>
+                    <span class="font-bold text-xl" style=${{color:C.amber}}>₹${cartTotal}</span>
+                  </div>
+                </div>
+                <button onClick=${()=>{setCartOpen(false);setChkOpen(true);}} class="w-full py-4 rounded-2xl font-bold text-black text-base" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>
+                  Proceed to Checkout →
+                </button>`}
+            </div>
+          </div>
+        </div>`:''}
+
+      ${sizeItem?R`<${SizeModal} item=${sizeItem} onClose=${()=>setSizeItem(null)} onAdd=${addToCart}/>`:null}
+      ${chkOpen?R`<${Checkout} cart=${cart} orderType=${otype} onClose=${()=>setChkOpen(false)} onPlace=${placeOrder}/>`:null}
+      ${succId?R`<${Success} orderId=${succId} onClose=${()=>setSuccId(null)}/>`:null}
+    </div>`;
+};
+
+/* ── ADMIN VIEW ── */
+const AdminView=({onGoBack,orders,setOrders,menuData,setMenuData})=>{
+  const [loggedIn,setLoggedIn]=useState(false);
+  const [pw,setPw]=useState('');
+  const [pwErr,setPwErr]=useState(false);
+  const [tab,setTab]=useState('orders');
+  const [editItem,setEditItem]=useState(null);
+  const [showAdd,setShowAdd]=useState(false);
+  const [newItem,setNewItem]=useState({name:'',fp:'',hp:'',hs:false,catId:'tandoori'});
+  const [fStt,setFStt]=useState('all');
+
+  const SCfg={
+    pending:{color:C.amber,bg:'rgba(245,158,11,.15)',icon:'⏳',label:'Pending'},
+    preparing:{color:C.blue,bg:'rgba(96,165,250,.15)',icon:'👨‍🍳',label:'Preparing'},
+    ready:{color:C.green,bg:'rgba(74,222,128,.15)',icon:'✅',label:'Ready'},
+    delivered:{color:'#6b7280',bg:'rgba(107,114,128,.15)',icon:'🛵',label:'Delivered'},
+    cancelled:{color:C.red,bg:'rgba(239,68,68,.15)',icon:'❌',label:'Cancelled'},
+  };
+
+  const todayStr=new Date().toDateString();
+  const todayO=orders.filter(o=>new Date(o.time).toDateString()===todayStr);
+  const todayRev=todayO.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+o.total,0);
+  const fOrds=fStt==='all'?orders:orders.filter(o=>o.status===fStt);
+  const updStt=(id,status)=>setOrders(prev=>prev.map(o=>o.id===id?{...o,status}:o));
+
+  if(!loggedIn)return R`
+    <div class="min-h-screen flex flex-col items-center justify-center px-6" style=${{background:'#0f1117'}}>
+      <button onClick=${onGoBack} class="self-start flex items-center gap-1 text-sm mb-8" style=${{color:'#9ca3af'}}>← Back to Menu</button>
+      <div class="w-full max-w-sm">
+        <div class="text-center mb-8">
+          <div class="w-24 h-24 rounded-3xl flex items-center justify-center text-5xl mx-auto mb-4" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>🔐</div>
+          <h1 class="text-white text-2xl font-bold">Admin Portal</h1>
+          <p class="text-sm mt-1" style=${{color:'#6b7280'}}>The Grill & Barbeque</p>
+        </div>
+        <form onSubmit=${e=>{e.preventDefault();pw==='admin123'?(setLoggedIn(true),setPwErr(false)):setPwErr(true);}} class="space-y-4">
+          <input type="password" placeholder="••••••••" value=${pw} onInput=${e=>setPw(e.target.value)} class="w-full p-4 rounded-2xl text-white placeholder-gray-600 outline-none text-center text-2xl tracking-widest card-bg"/>
+          ${pwErr?R`<p class="text-sm text-center" style=${{color:C.red}}>Incorrect password.</p>`:''}
+          <button type="submit" class="w-full py-4 rounded-2xl font-bold text-black text-lg" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>Sign In</button>
+        </form>
+        <p class="text-xs text-center mt-4" style=${{color:'#374151'}}>Default: admin123</p>
+      </div>
+    </div>`;
+
+  return R`
+    <div class="min-h-screen" style=${{background:'#0f1117'}}>
+      <div class="sticky top-0 z-30 px-4 py-3 flex items-center gap-3 glass border-b" style=${{borderColor:'#1a1f2e'}}>
+        <button onClick=${onGoBack} class="text-sm" style=${{color:'#9ca3af'}}>← Menu</button>
+        <div class="flex-1">
+          <h1 class="text-white font-bold text-sm">Admin Dashboard</h1>
+          <p class="text-xs" style=${{color:C.amber}}>The Grill & Barbeque</p>
+        </div>
+        <button onClick=${()=>setLoggedIn(false)} class="text-xs px-3 py-1.5 rounded-lg font-medium" style=${{background:'rgba(239,68,68,.1)',color:C.red,border:'1px solid rgba(239,68,68,.2)'}}>Logout</button>
+      </div>
+
+      <div class="px-4 pt-4 grid grid-cols-4 gap-2 mb-4">
+        ${[['Today','₹'+todayRev,C.amber],['Pending',orders.filter(o=>o.status==='pending').length,C.blue],['Done',orders.filter(o=>o.status==='delivered').length,C.green],['Total',orders.length,C.purple]].map(([lb,v,c],i)=>R`
+          <div key=${i} class="p-2 rounded-xl card-bg text-center">
+            <p class="font-bold text-sm" style=${{color:c}}>${v}</p>
+            <p class="text-xs mt-0.5" style=${{color:'#6b7280'}}>${lb}</p>
+          </div>`)}
+      </div>
+
+      <div class="flex gap-2 px-4 mb-4">
+        ${[['orders','📋','Orders'],['analytics','📊','Analytics'],['menu','🍽️','Menu']].map(([t,ic,lb])=>R`
+          <button key=${t} onClick=${()=>setTab(t)} class="flex-1 py-2.5 rounded-2xl text-xs font-semibold"
+            style=${{background:tab===t?'linear-gradient(135deg,#f59e0b,#ef4444)':'#1a1f2e',color:tab===t?'#000':'#9ca3af'}}>
+            ${ic} ${lb}
+          </button>`)}
+      </div>
+
+      <div class="px-4 pb-12">
+        ${tab==='orders'?R`
+          <div>
+            <div class="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
+              ${[['all','All'],...Object.entries(SCfg).map(([k,v])=>[k,v.label])].map(([k,lb])=>R`
+                <button key=${k} onClick=${()=>setFStt(k)} class="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                  style=${{background:fStt===k?'linear-gradient(135deg,#f59e0b,#ef4444)':'#1a1f2e',color:fStt===k?'#000':'#9ca3af'}}>
+                  ${lb} ${k!=='all'?'('+orders.filter(o=>o.status===k).length+')':''}
+                </button>`)}
+            </div>
+            ${fOrds.length===0?R`
+              <div class="text-center py-16">
+                <div class="text-5xl mb-3">📋</div>
+                <p class="text-white font-semibold mb-1">No orders yet</p>
+                <p class="text-sm" style=${{color:'#6b7280'}}>Orders appear here in real time</p>
+              </div>`:
+            fOrds.map(order=>{const sc=SCfg[order.status];return R`
+              <div key=${order.id} class="rounded-2xl p-4 mb-3 card-bg">
+                <div class="flex items-start justify-between mb-2">
+                  <div>
+                    <div class="flex items-center gap-2 mb-0.5">
+                      <span class="text-white font-bold text-sm">#${order.id}</span>
+                      <span class="text-xs px-2 py-0.5 rounded-lg font-semibold" style=${{background:sc.bg,color:sc.color}}>${sc.icon} ${sc.label}</span>
+                    </div>
+                    <p class="text-xs" style=${{color:'#6b7280'}}>${order.customer.name} · ${order.type==='dine-in'?'🪑':order.type==='takeout'?'📦':'🛵'} ${order.type}${order.customer.tableNo?' · Table '+order.customer.tableNo:''}</p>
+                    <p class="text-xs" style=${{color:'#6b7280'}}>${fmtD(order.time)} ${fmtT(order.time)} · 📞 ${order.customer.phone}</p>
+                    ${order.customer.address?R`<p class="text-xs truncate" style=${{color:'#6b7280',maxWidth:'18rem'}}>📍 ${order.customer.address}</p>`:''}
+                  </div>
+                  <span class="font-bold text-lg flex-shrink-0" style=${{color:C.amber}}>₹${order.total}</span>
+                </div>
+                <div class="rounded-xl p-3 mb-3" style=${{background:'#111827'}}>
+                  ${order.items.map((item,idx)=>R`<p key=${idx} class="text-xs mb-0.5" style=${{color:'#9ca3af'}}>${item.name}${item.hs?' ('+(item.size==='half'?'Half':'Full')+')':''} × ${item.qty} = ₹${item.price*item.qty}</p>`)}
+                  ${order.customer.notes?R`<p class="text-xs mt-1 italic" style=${{color:'#6b7280'}}>"${order.customer.notes}"</p>`:''}
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  ${Object.entries(SCfg).map(([st,cfg])=>R`
+                    <button key=${st} onClick=${()=>updStt(order.id,st)} class="px-2.5 py-1.5 rounded-xl text-xs font-semibold"
+                      style=${{background:order.status===st?cfg.color:'#111827',color:order.status===st?'#000':'#6b7280'}}>
+                      ${cfg.icon} ${cfg.label}
+                    </button>`)}
+                </div>
+              </div>`;
+            })}
+          </div>`:''}
+
+        ${tab==='analytics'?R`<${Analytics} orders=${orders}/>`:null}
+
+        ${tab==='menu'?R`
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-white font-bold">Menu Management</h3>
+              <button onClick=${()=>setShowAdd(!showAdd)} class="px-4 py-2 rounded-xl text-black text-sm font-bold" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>
+                ${showAdd?'✕ Cancel':'+ Add Item'}
+              </button>
+            </div>
+            ${showAdd?R`
+              <div class="rounded-2xl p-4 mb-4 card-bg slide-up">
+                <div class="space-y-3">
+                  <select value=${newItem.catId} onChange=${e=>setNewItem(n=>({...n,catId:e.target.value}))} class="w-full p-3 rounded-xl text-white text-sm outline-none" style=${{background:'#111827'}}>
+                    ${menuData.map(c=>R`<option key=${c.id} value=${c.id}>${c.emoji} ${c.name}</option>`)}
+                  </select>
+                  <input type="text" placeholder="Item Name" value=${newItem.name} onInput=${e=>setNewItem(n=>({...n,name:e.target.value}))} class="w-full p-3 rounded-xl text-white text-sm placeholder-gray-600 outline-none" style=${{background:'#111827'}}/>
+                  <input type="number" placeholder="Price" value=${newItem.fp} onInput=${e=>setNewItem(n=>({...n,fp:e.target.value}))} class="w-full p-3 rounded-xl text-white text-sm placeholder-gray-600 outline-none" style=${{background:'#111827'}}/>
+                  <label class="flex items-center gap-2">
+                    <input type="checkbox" checked=${newItem.hs} onChange=${e=>setNewItem(n=>({...n,hs:e.target.checked}))} class="w-4 h-4 rounded"/>
+                    <span class="text-gray-300 text-sm">Has Full / Half sizes?</span>
+                  </label>
+                  ${newItem.hs?R`<input type="number" placeholder="Half Price" value=${newItem.hp} onInput=${e=>setNewItem(n=>({...n,hp:e.target.value}))} class="w-full p-3 rounded-xl text-white text-sm placeholder-gray-600 outline-none" style=${{background:'#111827'}}/>`:''}
+                  <button onClick=${()=>{
+                    if(!newItem.name||!newItem.fp)return;
+                    const item={id:'c-'+Date.now(),name:newItem.name,fp:parseInt(newItem.fp),hp:newItem.hs&&newItem.hp?parseInt(newItem.hp):undefined,hs:newItem.hs};
+                    setMenuData(prev=>prev.map(c=>c.id===newItem.catId?{...c,items:[...c.items,item]}:c));
+                    setNewItem({name:'',fp:'',hp:'',hs:false,catId:'tandoori'});setShowAdd(false);
+                  }} class="w-full py-3 rounded-xl text-black font-bold text-sm" style=${{background:'linear-gradient(135deg,#f59e0b,#ef4444)'}}>Add Item</button>
+                </div>
+              </div>`:''}
+            ${menuData.map(cat=>R`
+              <div key=${cat.id} class="mb-5">
+                <h4 class="font-semibold mb-2 text-sm flex items-center gap-2" style=${{color:cat.color}}>
+                  ${cat.emoji} ${cat.name}
+                  <span class="text-xs px-1.5 py-0.5 rounded-md card-bg" style=${{color:'#6b7280'}}>${cat.items.length}</span>
+                </h4>
+                ${cat.items.map(item=>R`
+                  <div key=${item.id} class="p-3 rounded-2xl mb-2 card-bg">
+                    ${editItem&&editItem.id===item.id?R`
+                      <div>
+                        <input value=${editItem.name} onInput=${e=>setEditItem(ei=>({...ei,name:e.target.value}))} class="w-full p-2.5 rounded-xl text-white text-sm outline-none mb-2" style=${{background:'#111827'}}/>
+                        <div class="flex gap-2 mb-2">
+                          <input type="number" value=${editItem.fp} onInput=${e=>setEditItem(ei=>({...ei,fp:e.target.value}))} placeholder="Full Price" class="flex-1 p-2.5 rounded-xl text-white text-sm outline-none" style=${{background:'#111827'}}/>
+                          ${item.hs?R`<input type="number" value=${editItem.hp||''} onInput=${e=>setEditItem(ei=>({...ei,hp:e.target.value}))} placeholder="Half Price" class="flex-1 p-2.5 rounded-xl text-white text-sm outline-none" style=${{background:'#111827'}}/>`:''}
+                        </div>
+                        <div class="flex gap-2">
+                          <button onClick=${()=>setEditItem(null)} class="flex-1 py-2 rounded-xl text-gray-300 text-sm font-semibold" style=${{background:'#374151'}}>Cancel</button>
+                          <button onClick=${()=>{
+                            setMenuData(prev=>prev.map(c=>({...c,items:c.items.map(i=>i.id===editItem.id?{...i,name:editItem.name,fp:parseInt(editItem.fp),hp:editItem.hp?parseInt(editItem.hp):i.hp}:i)})));
+                            setEditItem(null);
+                          }} class="flex-1 py-2 rounded-xl text-black text-sm font-bold" style=${{background:C.amber}}>Save</button>
+                        </div>
+                      </div>`
+                    :R`
+                      <div class="flex items-center gap-3">
+                        <div class="flex-1 min-w-0">
+                          <p class="text-white text-sm font-medium truncate">${item.name}</p>
+                          <p class="text-xs font-semibold mt-0.5" style=${{color:C.amber}}>${item.hs?'₹'+item.hp+' Half · ₹'+item.fp+' Full':'₹'+item.fp}</p>
+                        </div>
+                        <button onClick=${()=>setEditItem({...item})} class="w-8 h-8 rounded-xl flex items-center justify-center text-sm" style=${{background:'#111827'}}>✏️</button>
+                        <button onClick=${()=>setMenuData(prev=>prev.map(c=>({...c,items:c.items.filter(i=>i.id!==item.id)})))} class="w-8 h-8 rounded-xl flex items-center justify-center text-sm" style=${{background:'#111827'}}>🗑️</button>
+                      </div>`}
+                  </div>`)}
+              </div>`)}
+          </div>`:''}
+      </div>
+    </div>`;
+};
+
+/* ── APP ── */
+const App=()=>{
+  const [view,setView]=useState('customer');
+  const [orders,setOrders]=useState([]);
+  const [menuData,setMenuData]=useState(MENU0);
+  return R`
+    <div style=${{maxWidth:'430px',margin:'0 auto',minHeight:'100vh'}}>
+      ${view==='customer'
+        ?R`<${CustomerView} onGoAdmin=${()=>setView('admin')} orders=${orders} setOrders=${setOrders} menuData=${menuData}/>`
+        :R`<${AdminView} onGoBack=${()=>setView('customer')} orders=${orders} setOrders=${setOrders} menuData=${menuData} setMenuData=${setMenuData}/>`}
+    </div>`;
+};
+
+render(R`<${App}/>`,document.getElementById('root'));
+</script>
+</body>
+</html>
